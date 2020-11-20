@@ -1,0 +1,8 @@
+build/
+include/
+license/
+output/
+source/
+tmp/
+
+.vs/
