@@ -65,15 +65,6 @@ workspace "third_party"
 		["source/detail"] = "source/detail/**.c*",
 		["source/include/detail"] = "source/detail/**.h*",
 	}
-		
-	vpaths {
-		["include"] = "include/**.h*",
-		["source"] = "source/**.h*",
-		["source"] = "source/**.c*",
-		["include/detail"] = "include/*/detail/**.h*",
-		["source/detail"] = "source/*/detail/**.h*",
-		["source/detail"] = "source/*/detail/**.c*"
-	}
 	
 	-- temporary fix
 	filter "action:xcode*"
