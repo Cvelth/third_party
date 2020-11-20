@@ -45,7 +45,7 @@ function add_library(name)
 	if path then
 		links { path }
 	else
-		print ("Fail to find '" .. path .. "'.")
+		print ("Fail to find '" .. name .. "'.")
 	end
 end
 function add_include_dir(name)
@@ -53,7 +53,7 @@ function add_include_dir(name)
 	if path then
 		include_dirs { path }
 	else
-		print ("Fail to find '" .. path .. "'.")
+		print ("Fail to find '" .. name .. "'.")
 	end
 end
 function add_dependency(name)
