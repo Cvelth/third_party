@@ -82,15 +82,13 @@ workspace "third_party"
 		defines { "NDEBUG" }
 		optimize "Full"
 		flags { "NoBufferSecurityCheck", "NoRuntimeChecks" }
-	filter "platforms:x86" architecture "x86"
-	filter "platforms:x64" architecture "x86_64"        
 	filter "action:vs*"
 		flags { "MultiProcessorCompile", "NoMinimalRebuild" }
 		linkoptions { "/ignore:4099" }
 		defines { "_CRT_SECURE_NO_DEPRECATE", "_CRT_SECURE_NO_WARNINGS", "_CRT_NONSTDC_NO_WARNINGS" }
-	filter { "system:windows", "configurations:Release" }
+	filter { "system:windows", "configurations:release" }
 		flags { "NoIncrementalLink" }
-	filter { "system:windows", "configurations:Release", "toolset:not mingw" }
+	filter { "system:windows", "configurations:release", "toolset:not mingw" }
 		flags { "LinkTimeOptimization" }            
 	filter {}
 	
