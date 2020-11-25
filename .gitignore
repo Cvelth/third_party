@@ -1,8 +1,10 @@
 build/
 include/
 license/
+log/
 output/
 source/
+status/
 tmp/
 
 .vs/
