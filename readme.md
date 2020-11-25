@@ -52,13 +52,16 @@ second_dependency:
     - `options` to pass to `cmake .` command, e.g. `-G <generator-name>`
     - `build_options` to pass to `cmake --build`, e.g. `-j [<jobs>]`
     - `native_build_options` to pass to `cmake --build` after `--`
-    - `windows_build_options` is identical to `build_options` except they are ignored if `os.target()` is not `"windows"`
-    - `windows_native_build_options` is identical to `native_build_options` except they are ignored if `os.target()` is not `"windows"`
-    - `linux_build_options` is identical to `build_options` except they are ignored if `os.target()` is not `"linux"`
-    - `linux_native_build_options` is identical to `native_build_options` except they are ignored if `os.target()` is not `"linux"`
-    - `macosx_build_options` is identical to `build_options` except they are ignored if `os.target()` is not `"macosx"`
-    - `macosx_native_build_options` is identical to `native_build_options` except they are ignored if `os.target()` is not `"macosx"`
     - `install_options` to pass to `cmake --install` command, e.g. `--component <comp>`
+    - `windows_options` are identical to `options` except they are ignored if `os.target()` is not `"windows"`
+    - `windows_build_options` are identical to `build_options` except they are ignored if `os.target()` is not `"windows"`
+    - `windows_native_build_options` are identical to `native_build_options` except they are ignored if `os.target()` is not `"windows"`
+    - `linux_options` are identical to `options` except they are ignored if `os.target()` is not `"linux"`
+    - `linux_build_options` are identical to `build_options` except they are ignored if `os.target()` is not `"linux"`
+    - `linux_native_build_options` are identical to `native_build_options` except they are ignored if `os.target()` is not `"linux"`
+    - `macosx_options` are identical to `options` except they are ignored if `os.target()` is not `"macosx"`
+    - `macosx_build_options` are identical to `build_options` except they are ignored if `os.target()` is not `"macosx"`
+    - `macosx_native_build_options` are identical to `native_build_options` except they are ignored if `os.target()` is not `"macosx"`
     - `log_location` - a directory to place the file with `stdout` output of `cmake` calls (default value is `third_party/log`), `stderr` is not affected.
     - `debug` - if `true`, debug configuration is build if applicable. Default value is `false`
 - `install`  

@@ -6,7 +6,7 @@ local dependency = require(path.getrelative(_SCRIPT_DIR, _MAIN_SCRIPT_DIR) .. "/
 local installer = require(path.getrelative(_SCRIPT_DIR, _MAIN_SCRIPT_DIR) .. "/third_party/script/install")
 
 local function yml_to_table(file_content)
-    local tinyyaml_location = github.fetch_release("peposso", "lua-tinyyaml", "1.0", nil, "lua-tinyyaml")
+	local tinyyaml_location = github.fetch_release("peposso", "lua-tinyyaml", "1.0", nil, "lua-tinyyaml")
     if not os.isfile(tinyyaml_location .. "/tinyyaml.lua") then
 		print("Error: Fail to load yaml parser.")
 		return nil
@@ -202,7 +202,8 @@ local function cmake_action(dependency_name, table, parser_state)
 	if not check_build_action("cmake", parser_state) then return true end
 	if not table or table == "default" then table = {} end
 	warn_about_ignored_parameters(table, {
-		"options", "build_options", "native_build_options",
+		"options", "windows_options", "linux_options", 
+		"macosx_options", "build_options", "native_build_options",
 		"windows_build_options", "windows_native_build_options",
 		"linux_build_options", "linux_native_build_options",
 		"macosx_build_options", "macosx_native_build_options",
@@ -216,16 +217,22 @@ local function cmake_action(dependency_name, table, parser_state)
 	options["install"] = table["install_options"] or ""
 	
 	if os.target() == "windows" then
+		options["cmake"] = options["cmake"] .. " "
+			.. (table["windows_options"] or "")
 		options["build"] = options["build"] .. " "
 			.. (table["windows_build_options"] or "")
 		options["native_build"] = options["native_build"] .. " "
 			.. (table["windows_native_build_options"] or "")
 	elseif os.target() == "linux" then
+		options["cmake"] = options["cmake"] .. " "
+			.. (table["linux_options"] or "")
 		options["build"] = options["build"] .. " "
 			.. (table["linux_build_options"] or "")
 		options["native_build"] = options["native_build"] .. " "
 			.. (table["linux_native_build_options"] or "")
 	elseif os.target() == "macosx" then
+		options["cmake"] = options["cmake"] .. " "
+			.. (table["macosx_options"] or "")
 		options["build"] = options["build"] .. " "
 			.. (table["macosx_build_options"] or "")
 		options["native_build"] = options["native_build"] .. " "
