@@ -20,7 +20,7 @@ function dependency.setup(name, table, directory)
     if tostring(lib) == 'yaml.null' or lib == "default" then
         lib = "lib/**";
     end
-    global_dependency_table[name]["lib_pattern"] = include
+    global_dependency_table[name]["lib_pattern"] = lib
 
     local files = table["files"]
     if tostring(files) == 'yaml.null' or files == "default" then
