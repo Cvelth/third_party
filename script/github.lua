@@ -9,14 +9,14 @@ end
 
 function github.fetch_release(owner, name, tag, filename)
     local download_dir = _MAIN_SCRIPT_DIR .. "/third_party/tmp/"
+        .. os.target() .. "/"
     local status_dir = _MAIN_SCRIPT_DIR .. "/third_party/status/"
     local status_file = status_dir .. "github_fetch_release_" .. owner
-        .. "_" .. name .. "_" .. tag
+        .. "_" .. name .. "_" .. tag 
     if (filename) then
-        status_file = status_file .. "_(" .. filename .. ").status"
-    else
-        status_file = status_file .. ".status"
+        status_file = status_file .. "_(" .. filename .. ")"
     end
+    status_file = status_file .. "_" .. os.target() .. ".status"
 
     os.mkdir(download_dir)
     os.mkdir(status_dir)
@@ -67,13 +67,15 @@ function github.fetch_release(owner, name, tag, filename)
 end
 function github.clone(owner, name, tag, options, log_location)
     local download_dir = _MAIN_SCRIPT_DIR .. "/third_party/tmp/"
+        .. os.target() .. "/"
     local status_dir = _MAIN_SCRIPT_DIR .. "/third_party/status/"
 
     options = options or ""
     log_location = log_location or (_MAIN_SCRIPT_DIR .. "/third_party/log/")
     local target_dir = download_dir .. name .. "_" .. tag
     local status_file = status_dir .. "github_clone_" .. owner
-        .. "_" .. name .. "_" .. tag .. " (" .. options .. ").status"
+        .. "_" .. name .. "_" .. tag .. " (" .. options .. ")_" 
+        .. os.target() .. ".status"
 
     os.mkdir(target_dir)
     os.mkdir(status_dir)
