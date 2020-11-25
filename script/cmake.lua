@@ -33,22 +33,27 @@ function cmake.build(name, directory_path, options, log_location, debug)
         local cmake_path = custom_cmake_location or ""
         local configuration_option = "Release"
         if debug then configuration_option = "Debug" end
+        local platform = ""
+        if os.target() == "windows" then platform = "-A x64" end
+
         print("  Running '" .. cmake_path .. "cmake'.")
-        if not os.execute(cmake_path .. "cmake"
-            .. " -B" .. build_dir
-            .. " -A x64 -DCMAKE_BUILD_TYPE=" .. configuration_option
+        local cmake_command = cmake_path .. "cmake"
+            .. " -B" .. build_dir .. " " .. platform
+            .. " -DCMAKE_BUILD_TYPE=" .. configuration_option
             .. " -S " .. directory_path .. " "
             .. options["cmake"]
             .. " --no-warn-unused-cli"
             .. " > " .. log_location .. "/"
             .. name .. "_cmake_release.log"
-        ) then
+        cmake_command = cmake_command:gsub("[\n\r]", " ")
+        if not os.execute(cmake_command) then
             print("Error: 'cmake' ("
                 .. configuration_string .. ") failed.")
             return false
         end
+
         print("  Building '" .. name .. "'.")
-        if not os.execute(cmake_path .. "cmake"
+        local cmake_build_command = cmake_path .. "cmake"
             .. " --build " .. build_dir
             .. " --config " .. configuration_option
             .. " --parallel "
@@ -57,20 +62,23 @@ function cmake.build(name, directory_path, options, log_location, debug)
             .. options["native_build"] .. " "
             .. " > " .. log_location .. "/"
             .. name .. "_cmake_build_release.log"
-        ) then
+        cmake_build_command = cmake_build_command:gsub("[\n\r]", " ")
+        if not os.execute(cmake_build_command) then
             print("Error: 'cmake --build' ("
                 .. configuration_string .. ") failed.")
             return false
         end
+
         print("  Installing '" .. name .. "'.")
-        if not os.execute(cmake_path .. "cmake"
+        local cmake_install_command = cmake_path .. "cmake"
             .. " --install " .. build_dir
             .. " --config " .. configuration_option
             .. " --prefix " .. output_dir
             .. options["install"]
             .. " > " .. log_location .. "/"
             .. name .. "_install_release.log"
-        ) then
+        cmake_install_command = cmake_install_command:gsub("[\n\r]", " ")
+        if not os.execute(cmake_install_command) then
             print("Error: 'cmake --install' ("
                 .. configuration_string .. ") failed.")
             return false

@@ -87,12 +87,13 @@ function github.clone(owner, name, tag, options, log_location)
         local url = "https://github.com/" .. owner .. "/" .. name .. ".git"
 
         print("Clone '" .. url .. "'.")
-        local ret = os.execute(git_path .. "git clone --depth 1 -q "
-            .. "-c advice.detachedHead=false "
-            .. options .. " --branch " .. tag
-            .. " " .. url .. " " .. target_dir
-            .. " > " .. log_location .. "/" .. name .. "_git_clone.log"
-        )
+        local command = git_path .. "git clone --depth 1 -q "
+        .. "-c advice.detachedHead=false "
+        .. options .. " --branch " .. tag
+        .. " " .. url .. " " .. target_dir
+        .. " > " .. log_location .. "/" .. name .. "_git_clone.log"
+        command = command:gsub("[\n\r]", " ")
+        local ret = os.execute(command)
         if not ret then
             print("Error: 'git clone' failed.")
             return false
