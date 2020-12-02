@@ -4,6 +4,7 @@ local github = require(path.getrelative(_SCRIPT_DIR, _MAIN_SCRIPT_DIR) .. "/thir
 local cmake = require(path.getrelative(_SCRIPT_DIR, _MAIN_SCRIPT_DIR) .. "/third_party/script/cmake")
 local dependency = require(path.getrelative(_SCRIPT_DIR, _MAIN_SCRIPT_DIR) .. "/third_party/script/dependency")
 local installer = require(path.getrelative(_SCRIPT_DIR, _MAIN_SCRIPT_DIR) .. "/third_party/script/install")
+local download = require(path.getrelative(_SCRIPT_DIR, _MAIN_SCRIPT_DIR) .. "/third_party/script/download")
 
 local function yml_to_table(file_content)
 	local tinyyaml_location = github.fetch_release("peposso", "lua-tinyyaml", "1.0", nil, "lua-tinyyaml")
@@ -269,10 +270,36 @@ local function install_action(dependency_name, table, parser_state)
 	return log_a_result("Action", "install", "    ", ret)
 end
 
+local function download_action(dependency_name, table, parser_state)
+	log_an_event("Action", "download", "    ")
+	if not check_fetch_action("download", parser_state) then return true end
+	if not table or table == "default" then
+		print("Error: Ignore 'download' action."
+			.. " It cannot be defaulted, you need to specify an url.")
+		return false
+	end
+	warn_about_ignored_parameters(table, { "url", "filename" }, "download", dependency_name)
+	if not check_parameters(table,
+		{ "url" },
+		{ "url", "filename" },
+		"download", dependency_name
+	) then return false end
+
+	local ret = download.download(dependency_name, table["url"], table["filename"])
+	if ret then parser_state.source_location = ret end
+	return log_a_result("Action", "download", "    ", ret)
+end
+
 local function depend_action(dependency_name, table, parser_state)
 	log_an_event("Action", "depend", "    ")
 	if not check_depend_action("depend", parser_state) then return true end
-	if not table or table == "default" then table = {} end
+	if not table then table = {} end
+	if table == "default" then 
+		table["include"] = "default"
+		table["lib"] = "default"
+		table["source"] = "default"
+		table["vpaths"] = "default"
+	end
 	warn_about_ignored_parameters(table,
 		{ "include", "lib", "files", "vpaths" },
 		"github_clone", dependency_name
@@ -292,6 +319,8 @@ local function parse_action(dependency_name, action_type, table, parser_state)
 		return cmake_action(dependency_name, table, parser_state)
 	elseif action_type == "install" then
 		return install_action(dependency_name, table, parser_state)
+	elseif action_type == "download" then
+		return download_action(dependency_name, table, parser_state)
 	elseif action_type == "depend" then
 		return depend_action(dependency_name, table, parser_state)
 	else
