@@ -212,7 +212,7 @@ local function check_depend_action(name, parser_state)
 	return true
 end
 
-local function is_present(value, table) 
+local function is_present(value, table)
 	for id, item in pairs(table) do
 		if value == item then
 			return true
@@ -308,9 +308,9 @@ local function cmake_action(dependency_name, table, parser_state)
 
 	local accepted_options = {}
 	accepted_options.name = {
-		["options"] = "cmake", 
-		["build_options"] = "build", 
-		["native_build_options"] = "native_build", 
+		["options"] = "cmake",
+		["build_options"] = "build",
+		["native_build_options"] = "native_build",
 		["install_options"] = "install"
 	}
 	accepted_options.os = {
@@ -405,16 +405,16 @@ local function install_action(dependency_name, table, parser_state)
 	local debug = {}
 	if parser_state.config == "release" or parser_state.config == "default" then
 		parser_state.release_output_location = _MAIN_SCRIPT_DIR .. "/third_party/output/"
-		local release = installer.files(dependency_name, table, 
-										parser_state.source_location, 
+		local release = installer.files(dependency_name, table,
+										parser_state.source_location,
 										parser_state.release_output_location,
 										"release")
 		if release then parser_state.release_output_location = release end
 	end
 	if parser_state.config == "debug" or parser_state.config == "default" then
 		parser_state.debug_output_location = _MAIN_SCRIPT_DIR .. "/third_party/output/"
-		local debug = installer.files(dependency_name, table, 
-									  parser_state.source_location, 
+		local debug = installer.files(dependency_name, table,
+									  parser_state.source_location,
 									  parser_state.debug_output_location,
 									  "debug")
 		if debug then parser_state.debug_output_location = debug end
@@ -446,16 +446,16 @@ end
 local function depend_action(dependency_name, table, parser_state)
 	log_an_event("Action", "depend", "    ")
 	if not check_depend_action("depend", parser_state) then return true end
-	if not table then table = {} end
-	if table == "default" then
+	if not table then
+		table = {}
 		table["include"] = "default"
 		table["lib"] = "default"
-		table["source"] = "default"
+		table["files"] = "default"
 		table["vpaths"] = "default"
 	end
 	warn_about_ignored_parameters(table,
 		{ "include", "lib", "files", "vpaths" },
-		"github_clone", dependency_name
+		"depend", dependency_name
 	)
 	local ret = dependency.setup(dependency_name, table, parser_state)
 	return log_a_result("Action", "depend", "    ", ret)
