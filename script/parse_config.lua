@@ -460,6 +460,22 @@ local function depend_action(dependency_name, table, parser_state)
 	local ret = dependency.setup(dependency_name, table, parser_state)
 	return log_a_result("Action", "depend", "    ", ret)
 end
+local function global_action(dependency_name, table, parser_state)
+	log_an_event("Action", "global", "    ")
+	if not table then
+		table = {}
+		table["include"] = "default"
+		table["lib"] = "default"
+		table["files"] = "default"
+		table["vpaths"] = "default"
+	end
+	warn_about_ignored_parameters(table,
+		{ "include", "lib", "files", "vpaths" },
+		"depend", dependency_name
+	)
+	local ret = dependency.setup_global(dependency_name, table, parser_state)
+	return log_a_result("Action", "global", "    ", ret)
+end
 
 local function parse_action(dependency_name, action_type, table, parser_state)
 	if table == "yaml_null" or table == "default" then table = nil end
@@ -475,6 +491,8 @@ local function parse_action(dependency_name, action_type, table, parser_state)
 		return download_action(dependency_name, table, parser_state)
 	elseif action_type == "depend" then
 		return depend_action(dependency_name, table, parser_state)
+	elseif action_type == "global" then
+		return global_action(dependency_name, table, parser_state)
 	else
 		print("Error: Unknown action: '" .. action_type .. "'.")
 		return false

@@ -14,7 +14,12 @@ A bunch of dependency management scripts for `premake5`.
         ```
   
         `acquire()` accepts a path to a file (without extension) as an argument, similar to `require()` in case you prefer for your `config.yml` file to be named differently, or placed somewhere other than the roon of your project. Default value is `third_party`, e.g. `third_party.yml` in the same directory as `premake5.lua` is used as a config file.
-    - Add `link(...)` or `link_everything()` call inside project definition:
+    - Add `third_party.depends(...)` or `third_party.depends_on_everything()` call inside project definition.  
+    Note: one could add an alias to any function, for example:  
+        ```lua
+        depends = third_party.depends
+        depends_on_everything = third_party.depends_on_everything
+        ```  
 - Enjoy!
 
 
@@ -79,12 +84,16 @@ second_dependency:
   
     Note, that `{source_dir}` is implied and must not be explicitly added to patterns, e.g. `{source_dir}/includes/my_include/single_file.hpp` is to be specified as `includes/my_include/single_file.hpp`
 - `depend`  
-    Selects files to be linked to when `link(...)` or `link_everything()` is called.  
+    Selects files to be used by the project to when `depends(...)` or `depends_on_everything()` is called.  
     Accepts `default` or optional parameters:
     - `include`, a single pattern or a list of patterns to be added to `includedirs` of the project, e.g. `include/add/only/this/subdirectory/**`. Default value is `include`
     - `lib`, a single pattern or a list of patterns to be added as input library dependencies, e.g. `lib/link_only_this_one_file.*`, or `lib/link/everything/from/this/subdirectory/**`. Default value is `lib/**`
     - `files`, a single pattern or a list of patterns to be added as source files to the project, e.g. `source/**` to add everything from the directory. Default value is `{ "source/**", "include/**" }`
     - `vpaths`, a `default` or a dictionary where `lhs` are virtual path pattern and `rhs` - real one, e.g. `resource/text_files: **.txt` would consider all the `*.txt` files as part of `resource/text_files` virtual directory. Default value is `{ dependency_name/include: include/**, dependency_name/source: source/** }`
+- `global`
+    Selects to be by the project to when `depends(...)` or `depends_on_everything()` is called.  
+    The difference from `depend` is that `global` does not require any previous steps. This allows to simply link or add as include directory or even add a source file using its global path. This option is intended primarily to give an ability to use 'third_party' together with another dependency management system.
+    Accepts `default` or optional parameters equivalent to a `depend` action.
 
 ## `third_party.user.yml` file structure
 The file is a dictionary with the structure of:
@@ -94,7 +103,7 @@ second_option: second_value
 # ...
 ```
 
-### Known options:
+### Supported options:
 - `verbose` - if `true`, additional output is "thrown" into `stdout`.
 - `debug` - same as `verbose`, if both are specified, the value is (`verbose` or `debug`), e.g. it's `false` only if both of them are set to `false` (or not specified)
 - `cmake` - path to cmake, only needed if `cmake` is not present in the `PATH` variable. It should not include filename itself. Only the directory.
@@ -118,7 +127,7 @@ second_option: second_value
             "include/**"
             "source/lib/**"
         }
-        third_party.link {
+        third_party.depends {
             "lib_dependency_1_name",
             "lib_dependency_2_name",
             -- ...
@@ -135,7 +144,7 @@ second_option: second_value
             "include/**"
             "source/app/**"
         }
-        third_party.link {
+        third_party.depends {
             "app_dependency_1_name",
             "app_dependency_2_name",
             -- ...
@@ -145,27 +154,14 @@ second_option: second_value
 
 ### `third_party.yml`
 ```yml
+# cmake example
 glfw:
 - github_release:
     owner: glfw
     tag: "3.3.2"
     file: glfw-3.3.2.zip
 - cmake:
-    linux_options: >
-        -G "Unix Makefiles"
-- depend:
-    include: include
-    lib: lib/*
-
-glfw_debug:
-- github_release:
-    owner: glfw
-    name: glfw
-    tag: "3.3.2"
-    file: glfw-3.3.2.zip
-- cmake:
-    debug: true
-    options: >
+    debug_options: >
         -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON
     linux_options: >
         -G "Unix Makefiles"
@@ -173,6 +169,7 @@ glfw_debug:
     include: include
     lib: lib/*
     
+# example of adding source files to the project
 lodepng:
 - github_clone:
     owner: Cvelth
@@ -187,7 +184,18 @@ lodepng:
     - source/lodepng.cpp
     vpaths: 
         lodepng: "**"
+        
+# header only example
+vkfw:
+- github_clone:
+    owner: cvelth
+    tag: main
+- install:
+    include: default
+- depend:
+    include: default
 
+# single header example
 doctest:
 - download:
     url: https://raw.githubusercontent.com/onqtam/doctest/2.4.1/doctest/doctest.h
@@ -195,8 +203,13 @@ doctest:
 - install:
     include: doctest.h
 - depend: default
+
+# global example
+vulkan:
+- global:
+    include: %VULKAN_SDK%/Include
+    lib: %VULKAN_SDK%/Lib/vulkan-1
 ```
-`third_party.link { "glfw" }` will link a release build, while `third_party.link { "glfw_debug" }` - a debug one.
 
 ### `third_party.user.yml`
 ```yml

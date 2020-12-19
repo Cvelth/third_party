@@ -2,20 +2,7 @@ local dependency = {}
 
 global_dependency_table = {}
 
-function dependency.setup(name, table, parser_state)
-    if global_dependency_table[name] then
-        print("'" .. name .. "' is used more than once. Dependency names must not repeat.")
-        return false
-    end
-    global_dependency_table[name] = {}
-
-    if parser_state.config == "release" or parser_state.config == "default" then
-        global_dependency_table[name].release_directory = parser_state.release_output_location
-    end
-    if parser_state.config == "debug" or parser_state.config == "default" then
-        global_dependency_table[name].debug_directory = parser_state.debug_output_location
-    end
-
+local function setup_impl(name, table, parser_state)
     local include = table["include"]
     if tostring(include) == 'yaml.null' or include == "default" then
         include = "include";
@@ -43,6 +30,29 @@ function dependency.setup(name, table, parser_state)
             .." It doesn't make sense without a valid 'files' pattern.")
     end
     global_dependency_table[name].vpath_patterns = vpath_patterns
+end
+
+function dependency.setup(name, table, parser_state)
+    if global_dependency_table[name] then
+        print("Error: '" .. name .. "' is used more than once. Dependency names must not repeat.")
+        return false
+    end
+    global_dependency_table[name] = {}
+
+    if parser_state.config == "release" or parser_state.config == "default" then
+        global_dependency_table[name].config = "release"
+        global_dependency_table[name].release_directory = parser_state.release_output_location
+    end
+    if parser_state.config == "debug" or parser_state.config == "default" then
+        if global_dependency_table[name].config == "release" then
+            global_dependency_table[name].config = "any"
+        else
+            global_dependency_table[name].config = "debug"
+        end
+        global_dependency_table[name].debug_directory = parser_state.debug_output_location
+    end
+
+    setup_impl(name, table, parser_state)
 
     if parser_state.config == "release" or parser_state.config == "default" then
         parser_state.release_complete = true
@@ -54,41 +64,71 @@ function dependency.setup(name, table, parser_state)
     return true
 end
 
-function link_impl(name, table_entry, config)
+function dependency.setup_global(name, table, parser_state)
+    if global_dependency_table[name] then
+        print("Error: '" .. name .. "' is used more than once. Dependency names must not repeat.")
+        return false
+    end
+    global_dependency_table[name] = {}
+
+    if parser_state.config or parser_state.release_output_location or parser_state.debug_output_location then
+        print("Warning: '" .. name .. "' has a 'global' action after the 'config' was already defined. "
+            .. "This could break other 'depend' (or 'global') actions of the dependency.")
+    end
+    parser_state.config = "global"
+    global_dependency_table[name].config = "global"
+    
+    setup_impl(name, table, parser_state)
+
+    parser_state.release_complete = true
+    parser_state.debug_complete = true
+
+    return true
+end
+
+function depend_impl(name, table_entry, config)
     if not (name and table_entry) then
-        print("Error: Unable to link to an unknown dependency '" .. name .. "'."
+        print("Error: Unable to depend on an unknown dependency '" .. name .. "'."
             .."\nMake sure it's included in the config file"
             .. " and is successfully installed.")
         return false
     end
 
     local directory = ""
-    if config == "release" then
-        if table_entry.release_directory then
+    if table_entry.config == "global" then
+        directory = ""
+    elseif config == "release" then
+        if (table_entry.config == "release" or table_entry.config == "any") 
+                and table_entry.release_directory then
             directory = table_entry.release_directory
         else
-            print("Error: Unable to link dependency '" .. name 
+            print("Error: Unable to depend on a dependency '" .. name 
                 .. "' in release mode it was not build in.")
             return nil
         end
     elseif config == "debug" then
-        if table_entry.debug_directory then
+        if (table_entry.config == "debug" or table_entry.config == "any") 
+                and table_entry.debug_directory then
             directory = table_entry.debug_directory
         else
-            print("Error: Unable to link dependency '" .. name 
+            print("Error: Unable to depend on a dependency '" .. name 
                 .. "' in debug mode it was not build in.")
             return nil
         end
-    else
+    elseif config == "any" then
         if table_entry.release_directory then
             directory = table_entry.release_directory
         elseif table_entry.debug_directory then
             directory = table_entry.debug_directory
         else
-            print("Error: Unable to link dependency '" .. name 
-                .. "': it was not built in either release or debug mode.")
+            print("Error: Unable to depend on a dependency '" .. name 
+                .. "': it was not built in a supported configuration.")
             return nil
         end
+    else
+        print("Error: Unable to depend on a dependency '" .. name
+            .. "': unsupported configuration requested '" .. config .. "'.")
+        return nil
     end
 
     local include_location = table_entry.include_location
@@ -142,13 +182,13 @@ function link_impl(name, table_entry, config)
     return true
 end
 
-function dependency.link(name, config)
-    return link_impl(name, global_dependency_table[name], config or "any")
+function dependency.depend_on(name, config)
+    return depend_impl(name, global_dependency_table[name], config or "any")
 end
-function dependency.link_everything(config)
+function dependency.depend_on_everything(config)
     local ret = true
     for name, table_entry in pairs(global_dependency_table) do
-        ret = link_impl(name, table_entry, config or "any") and ret
+        ret = depend_impl(name, table_entry, config or "any") and ret
     end
     return ret
 end
