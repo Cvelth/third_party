@@ -16,13 +16,31 @@ function third_party.acquire(filename)
 end
 
 local dependency = require(path.getrelative(_SCRIPT_DIR, _MAIN_SCRIPT_DIR) .. "/third_party/script/dependency")
-function third_party.link(name_table)
+
+function third_party.link_release(name_table)
     for id, name in pairs(name_table) do
-        dependency.link(name)
+        dependency.link(name, "release")
     end
 end
+function third_party.link_debug(name_table)
+    for id, name in pairs(name_table) do
+        dependency.link(name, "debug")
+    end
+end
+function third_party.link(name_table)
+    for id, name in pairs(name_table) do
+        dependency.link(name, "any")
+    end
+end
+
+function third_party.link_everything_release()
+    dependency.link_everything("release")
+end
+function third_party.link_everything_debug()
+    dependency.link_everything("debug")
+end
 function third_party.link_everything()
-    dependency.link_everything()
+    dependency.link_everything("any")
 end
 
 return third_party

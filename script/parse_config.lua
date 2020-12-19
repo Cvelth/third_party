@@ -129,30 +129,132 @@ local function check_fetch_action(name, parser_state)
 	return true
 end
 local function check_build_action(name, parser_state)
-	if parser_state.output_location then
-		print("Warning: Ignore a '" .. name .. "' action "
-			.. "because the target was already installed.")
-		return false
+	local release_state = true
+	local debug_state = true
+	if parser_state.config == "release" or parser_state.config == "default" then
+		if parser_state.release_output_location then release_state = false end
 	end
+	if parser_state.config == "debug" or parser_state.config == "default" then
+		if parser_state.debug_output_location then debug_state = false end
+	end
+	if not release_state then
+		if not debug_state then
+			print("Warning: Ignore a '" .. name .. "' action "
+				.. "because the target was already installed.")
+				return false
+		else
+			print("Warning: Change '" .. name .. "' action configuration to 'debug' "
+				.. "because the 'release' target was already installed.")
+			parser_state.config = "debug"
+		end
+	elseif not debug_state then
+		print("Warning: Change '" .. name .. "' action configuration to 'release' "
+			.. "because the 'debug' target was already installed.")
+		parser_state.config = "release"
+	end
+
 	if not parser_state.source_location then
 		print("Warning: Ignore a '" .. name .. "' action "
-			.. "because no sources were acquired before it.")
+			.. "because no sources were acquired.")
 		return false
 	end
 	return true
 end
 local function check_depend_action(name, parser_state)
-	if parser_state.is_complete then
-		print("Warning: Ignore a '" .. name .. "' action "
-			.. "because the target is already in use.")
-		return false
+	local release_state = true
+	local debug_state = true
+	if parser_state.config == "release" or parser_state.config == "default" then
+		if parser_state.release_complete then release_state = false end
 	end
-	if not parser_state.output_location then
-		print("Warning: Ignore a 'depend' action "
-			.. "because there are no targets installed.")
-		return false
+	if parser_state.config == "debug" or parser_state.config == "default" then
+		if parser_state.release_complete then debug_state = false end
 	end
+	if not release_state then
+		if not debug_state then
+			print("Warning: Ignore a '" .. name .. "' action "
+				.. "because the target is already in use.")
+				return false
+		else
+			print("Warning: Change '" .. name .. "' action configuration to 'debug' "
+				.. "because the 'release' target is already in use.")
+			parser_state.config = "debug"
+		end
+	elseif not debug_state then
+		print("Warning: Change '" .. name .. "' action configuration to 'release' "
+			.. "because the 'debug' target is already in use.")
+		parser_state.config = "release"
+	end
+
+	release_state = false
+	debug_state = false
+	if parser_state.config == "release" or parser_state.config == "default" then
+		if parser_state.release_output_location then release_state = true end
+	end
+	if parser_state.config == "debug" or parser_state.config == "default" then
+		if parser_state.release_output_location then debug_state = true end
+	end
+	if not release_state then
+		if not debug_state then
+			print("Warning: Ignore a 'depend' action "
+				.. "because there are no targets installed.")
+				return false
+		else
+			print("Warning: Change '" .. name .. "' action configuration to 'debug' "
+				.. "because there are no 'release' targets installed.")
+			parser_state.config = "debug"
+		end
+	elseif not debug_state then
+		print("Warning: Change '" .. name .. "' action configuration to 'release' "
+			.. "because there are no 'debug' targets installed.")
+		parser_state.config = "release"
+	end
+
 	return true
+end
+
+local function is_present(value, table) 
+	for id, item in pairs(table) do
+		if value == item then
+			return true
+		end
+	end
+	return false
+end
+local function parse_cmake_option_name(name, accepted_options)
+	local output = {}
+	local leftover_string = ""
+	for string in string.gmatch(name, "([^_]+)") do
+		if is_present(string, accepted_options.os) then
+			if output["os"] then
+				return nil
+			else
+				output["os"] = string
+			end
+		elseif is_present(string, accepted_options.config) then
+			if output["config"] then
+				return nil
+			else
+				output["config"] = string
+			end
+		else
+			leftover_string = leftover_string .. string .. "_"
+		end
+	end
+
+	leftover_string = leftover_string:sub(1, #leftover_string - 1)
+	local name = accepted_options.name[leftover_string]
+	if name then
+		if output["name"] then
+			return nil
+		else
+			output["name"] = name
+		end
+		output["os"] = output["os"] or "every"
+		output["config"] = output["config"] or "every"
+		return output
+	else
+		return nil
+	end
 end
 
 local function github_release_action(dependency_name, table, parser_state)
@@ -200,74 +302,125 @@ local function github_clone_action(dependency_name, table, parser_state)
 end
 local function cmake_action(dependency_name, table, parser_state)
 	log_an_event("Action", "cmake", "    ")
-	if not check_build_action("cmake", parser_state) then return true end
 	if not table or table == "default" then table = {} end
-	warn_about_ignored_parameters(table, {
-		"options", "windows_options", "linux_options", 
-		"macosx_options", "build_options", "native_build_options",
-		"windows_build_options", "windows_native_build_options",
-		"linux_build_options", "linux_native_build_options",
-		"macosx_build_options", "macosx_native_build_options",
-		"install_options", "log_location", "debug"
-	}, "cmake", dependency_name)
+	parser_state.config = table["config"] or "default"
+	if not check_build_action("cmake", parser_state) then return true end
 
-	local options = {}
-	options["cmake"] = table["options"] or ""
-	options["build"] = table["build_options"] or ""
-	options["native_build"] = table["native_build_options"] or ""
-	options["install"] = table["install_options"] or ""
-	
-	if os.target() == "windows" then
-		options["cmake"] = options["cmake"] .. " "
-			.. (table["windows_options"] or "")
-		options["build"] = options["build"] .. " "
-			.. (table["windows_build_options"] or "")
-		options["native_build"] = options["native_build"] .. " "
-			.. (table["windows_native_build_options"] or "")
-	elseif os.target() == "linux" then
-		options["cmake"] = options["cmake"] .. " "
-			.. (table["linux_options"] or "")
-		options["build"] = options["build"] .. " "
-			.. (table["linux_build_options"] or "")
-		options["native_build"] = options["native_build"] .. " "
-			.. (table["linux_native_build_options"] or "")
-	elseif os.target() == "macosx" then
-		options["cmake"] = options["cmake"] .. " "
-			.. (table["macosx_options"] or "")
-		options["build"] = options["build"] .. " "
-			.. (table["macosx_build_options"] or "")
-		options["native_build"] = options["native_build"] .. " "
-			.. (table["macosx_native_build_options"] or "")
-	else
-		print("Warning: system-specific options are not supported on '" .. os.target() .. "'.")
+	local accepted_options = {}
+	accepted_options.name = {
+		["options"] = "cmake", 
+		["build_options"] = "build", 
+		["native_build_options"] = "native_build", 
+		["install_options"] = "install"
+	}
+	accepted_options.os = {
+		"windows", "linux", "macosx",
+		"aix", "bsd", "haiku",
+		"solaris", "wii", "xbox360"
+	}
+	accepted_options.config = { "release", "debug" }
+
+	local release_options = {}
+	if parser_state.config == "release" or parser_state.config == "default" then
+		release_options["cmake"] = ""
+		release_options["build"] = ""
+		release_options["native_build"] = ""
+		release_options["install"] = ""
 	end
 
-	local ret = cmake.build(
-		dependency_name, parser_state.source_location,
-		options, table["log_location"], table["debug"]
-	)
-	if ret then parser_state.output_location = ret end
-	return log_a_result("Action", "cmake", "    ", ret)
+	local debug_options = {}
+	if parser_state.config == "debug" or parser_state.config == "default" then
+		debug_options["cmake"] = ""
+		debug_options["build"] = ""
+		debug_options["native_build"] = ""
+		debug_options["install"] = ""
+	end
+	for option_name, option_value in pairs(table) do
+		if not (option_name == "log_location" or option_name == "config") then
+			local parsed_option = parse_cmake_option_name(option_name, accepted_options)
+			if parsed_option and option_value then
+				if parsed_option.name then
+					if parsed_option.os == os.target() or parsed_option.os == "every" then
+						if parser_state.config == "release" or parser_state.config == "default" then
+							if parsed_option.config == "release" or parsed_option.config == "every" then
+								release_options[parsed_option.name] = release_options[parsed_option.name]
+									.. " " .. option_value
+							end
+						end
+						if parser_state.config == "debug" or parser_state.config == "default" then
+							if parsed_option.config == "debug" or parsed_option.config == "every" then
+								debug_options[parsed_option.name] = debug_options[parsed_option.name]
+									.. " " .. option_value
+							end
+						end
+					end
+				else
+					print("Warning: Ignore unknown parameter '" .. option_name
+						.. "', action: 'cmake' in '" .. dependency_name .. "'.")
+				end
+			else
+				print("Warning: Ignore unknown parameter '" .. option_name
+					.. "', action: 'cmake' in '" .. dependency_name .. "'.")
+			end
+		end
+	end
+
+	local release = {}
+	local debug = {}
+	if parser_state.config == "release" or parser_state.config == "default" then
+		release = cmake.build(
+			dependency_name, parser_state.source_location,
+			release_options, table["log_location"], "release"
+		)
+		if release then parser_state.release_output_location = release end
+	end
+	if parser_state.config == "debug" or parser_state.config == "default" then
+		debug = cmake.build(
+			dependency_name, parser_state.source_location,
+			release_options, table["log_location"], "debug"
+		)
+		if debug then parser_state.debug_output_location = debug end
+	end
+	
+	return log_a_result("Action", "cmake", "    ", release and debug)
 end
 
 local function install_action(dependency_name, table, parser_state)
 	log_an_event("Action", "install", "    ")
-	if not check_build_action("install", parser_state) then return true end
 	if not table or table == "default" then
 		print("Error: Ignore 'install' action."
 			.. " It cannot be defaulted, you need to specify"
 			.. " at least one valid pattern.")
 		return false
 	end
+	parser_state.config = table["config"] or "default"
+	if not check_build_action("install", parser_state) then return true end
+
 	warn_about_ignored_parameters(table,
 		{ "include", "source", "lib", "log_location", "debug" },
 		"install", dependency_name
 	)
 
-	parser_state.output_location = _MAIN_SCRIPT_DIR .. "/third_party/output/"
-	local ret = installer.files(dependency_name, table, parser_state)
-	if ret then parser_state.output_location = ret end
-	return log_a_result("Action", "install", "    ", ret)
+	local release = {}
+	local debug = {}
+	if parser_state.config == "release" or parser_state.config == "default" then
+		parser_state.release_output_location = _MAIN_SCRIPT_DIR .. "/third_party/output/"
+		local release = installer.files(dependency_name, table, 
+										parser_state.source_location, 
+										parser_state.release_output_location,
+										"release")
+		if release then parser_state.release_output_location = release end
+	end
+	if parser_state.config == "debug" or parser_state.config == "default" then
+		parser_state.debug_output_location = _MAIN_SCRIPT_DIR .. "/third_party/output/"
+		local debug = installer.files(dependency_name, table, 
+									  parser_state.source_location, 
+									  parser_state.debug_output_location,
+									  "debug")
+		if debug then parser_state.debug_output_location = debug end
+	end
+	
+	return log_a_result("Action", "install", "    ", release and debug)
 end
 
 local function download_action(dependency_name, table, parser_state)
@@ -294,7 +447,7 @@ local function depend_action(dependency_name, table, parser_state)
 	log_an_event("Action", "depend", "    ")
 	if not check_depend_action("depend", parser_state) then return true end
 	if not table then table = {} end
-	if table == "default" then 
+	if table == "default" then
 		table["include"] = "default"
 		table["lib"] = "default"
 		table["source"] = "default"
@@ -304,8 +457,7 @@ local function depend_action(dependency_name, table, parser_state)
 		{ "include", "lib", "files", "vpaths" },
 		"github_clone", dependency_name
 	)
-	local ret = dependency.setup(dependency_name, table, parser_state.output_location)
-	if ret then parser_state.is_complete = true end
+	local ret = dependency.setup(dependency_name, table, parser_state)
 	return log_a_result("Action", "depend", "    ", ret)
 end
 

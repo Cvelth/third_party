@@ -1,10 +1,10 @@
 local installer = {}
 
-local function install_impl(pattern, parser_state, directory, file_type, log_file, status)
-	local matches = os.matchfiles(parser_state.source_location ..  "/" .. pattern)
-	for id, file in pairs(matches) do
+local function install_impl(pattern, source_location, directory, file_type, log_file, status)
+	local matches = os.matchfiles(source_location ..  "/" .. pattern)
+    for id, file in pairs(matches) do
 		local destination = directory .. file_type .. "/"
-            .. path.getrelative(parser_state.source_location, file)
+            .. path.getrelative(source_location, file)
         os.mkdir(path.getdirectory(destination))
         ret, err = os.copyfile(file, destination)
         if not ret then print(err) end
@@ -13,14 +13,14 @@ local function install_impl(pattern, parser_state, directory, file_type, log_fil
 	end
 end
 
-local function install_table(value, parser_state, directory, file_type, log_file, status)
+local function install_table(value, source_location, directory, file_type, log_file, status)
     if value then
         if type(value) == "table" then
             for id, pattern in pairs(value) do
-                install_impl(pattern, parser_state, directory, file_type, log_file, status)
+                install_impl(pattern, source_location, directory, file_type, log_file, status)
             end
         else
-            install_impl(value, parser_state, directory, file_type, log_file, status)
+            install_impl(value, source_location, directory, file_type, log_file, status)
         end
     end
 end
@@ -39,9 +39,7 @@ local function to_string(input)
     end
 end
 
-function installer.files(dependency_name, table, parser_state)
-    local configuration_string = "release"
-    if table["debug"] then configuration_string = "debug" end
+function installer.files(dependency_name, table, source_location, output_location, configuration_string)
     local log_location = table["log_location"] or (_MAIN_SCRIPT_DIR .. "/third_party/log")
 
     local status_dir = _MAIN_SCRIPT_DIR .. "/third_party/status/"
@@ -59,7 +57,7 @@ function installer.files(dependency_name, table, parser_state)
     local status_file = status_dir .. status_filename
 
     if not os.isfile(status_file) then
-        local output_dir = parser_state.output_location .. os.target() .. "_"
+        local output_dir = output_location .. os.target() .. "_"
             .. configuration_string .. "/" .. dependency_name .. "/"
 
         os.mkdir(log_location)
@@ -67,18 +65,27 @@ function installer.files(dependency_name, table, parser_state)
         local installation_status = true
         for name, value in pairs(table) do
             if name == "include" then
+                if not value or value == "default" then
+                    value = "include/**"
+                end
                 install_table(
-                    value, parser_state, output_dir,
+                    value, source_location, output_dir,
                     "include", log_file, installation_status
                 )
             elseif name == "source" then
+                if not value or value == "default" then
+                    value = "source/**"
+                end
                 install_table(
-                    value, parser_state, output_dir,
+                    value, source_location, output_dir,
                     "source", log_file, installation_status
                 )
             elseif name == "lib" then
+                if not value or value == "default" then
+                    value = "lib/**"
+                end
                 install_table(
-                    value, parser_state, output_dir,
+                    value, source_location, output_dir,
                     "lib", log_file, installation_status
                 )
             elseif name == "log_location" or name == "debug" then

@@ -10,6 +10,7 @@ end
 function github.fetch_release(owner, name, tag, filename)
     local download_dir = _MAIN_SCRIPT_DIR .. "/third_party/tmp/"
         .. os.target() .. "/"
+    log_location = log_location or (_MAIN_SCRIPT_DIR .. "/third_party/log/")
     local status_dir = _MAIN_SCRIPT_DIR .. "/third_party/status/"
     local status_file = status_dir .. "github_fetch_release_" .. owner
         .. "_" .. name .. "_" .. tag 
@@ -20,6 +21,7 @@ function github.fetch_release(owner, name, tag, filename)
 
     os.mkdir(download_dir)
     os.mkdir(status_dir)
+    os.mkdir(log_location)
 
     if not os.isfile(status_file) then
         --print("- third_party: '" .. name .."' not found.")
@@ -39,9 +41,7 @@ function github.fetch_release(owner, name, tag, filename)
             print ("Error: Download failed: " .. result_str .. " (" .. response_code .. ").")
             return nil
         else
-            if not (path.getextension(downloaded_file) == ".zip") then
-                print ("Error: Unable to extract unsupported file: '" .. os.realpath(downloaded_file))
-            else
+            if path.getextension(downloaded_file) == ".zip" then
                 print ("Extract '" .. os.realpath(downloaded_file) .. "'.")
                 zip.extract(downloaded_file, target_dir)
 
@@ -56,6 +56,31 @@ function github.fetch_release(owner, name, tag, filename)
                     file:close()
                     return target_dir
                 end
+            elseif path.getextension(downloaded_file) == ".gz" 
+                    and path.getextension(path.replaceextension(downloaded_file, "")) == ".tar" then
+                print ("Extract '" .. os.realpath(downloaded_file) .. "'.")
+
+                target_dir = path.replaceextension(target_dir, "")
+                os.mkdir(target_dir)
+                
+                local command = "tar -xvzf " .. downloaded_file .. " -C " .. target_dir
+                    .. " > " .. log_location .. "/" .. name .. "_git_release.log"
+                command = command:gsub("[\n\r]", " ")
+                local ret = os.execute(command)
+
+                local matches = os.matchdirs(target_dir .. "/*")
+                if not (#matches == 1) then
+                    print ("Error: The extraction has failed"
+                        .." or file structure inside the archive is not supported.")
+                else
+                    target_dir = matches[1]
+                    local file = io.open(status_file, "w")
+                    file:write(target_dir)
+                    file:close()
+                    return target_dir
+                end
+            else
+                print ("Error: Unable to extract unsupported file: '" .. os.realpath(downloaded_file))
             end
         end
     else

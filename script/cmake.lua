@@ -5,9 +5,7 @@ function cmake.custom_location(new_location)
     custom_cmake_location = new_location
 end
 
-function cmake.build(name, directory_path, options, log_location, debug)
-    local configuration_string = "release"
-    if debug then configuration_string = "debug" end
+function cmake.build(name, directory_path, options, log_location, configuration_string)
     local status_dir = _MAIN_SCRIPT_DIR .. "/third_party/status/"
     local status_filename = "cmake_build_" .. name .. "_"
         .. os.target() .. "_" .. configuration_string .. " ("

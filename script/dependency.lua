@@ -2,31 +2,37 @@ local dependency = {}
 
 global_dependency_table = {}
 
-function dependency.setup(name, table, directory)
+function dependency.setup(name, table, parser_state)
     if global_dependency_table[name] then
         print("'" .. name .. "' is used more than once. Dependency names must not repeat.")
         return false
     end
     global_dependency_table[name] = {}
-    global_dependency_table[name]["directory"] = directory
+
+    if parser_state.config == "release" or parser_state.config == "default" then
+        global_dependency_table[name].release_directory = parser_state.release_output_location
+    end
+    if parser_state.config == "debug" or parser_state.config == "default" then
+        global_dependency_table[name].debug_directory = parser_state.debug_output_location
+    end
 
     local include = table["include"]
     if tostring(include) == 'yaml.null' or include == "default" then
         include = "include";
     end
-    global_dependency_table[name]["include_location"] = include
+    global_dependency_table[name].include_location = include
 
     local lib = table["lib"]
     if tostring(lib) == 'yaml.null' or lib == "default" then
         lib = "lib/**";
     end
-    global_dependency_table[name]["lib_pattern"] = lib
+    global_dependency_table[name].lib_pattern = lib
 
     local files = table["files"]
     if tostring(files) == 'yaml.null' or files == "default" then
         files = { "source/**", "include/**" }
     end
-    global_dependency_table[name]["file_list"] = files
+    global_dependency_table[name].file_list = files
 
     local vpath_patterns = table["vpaths"]
     if not vpath_patterns or tostring(vpath_patterns) == 'yaml.null' then
@@ -35,14 +41,20 @@ function dependency.setup(name, table, directory)
     if not files and not (vpath_patterns == "default") then
         print("Warning: Ignore 'vpaths' parameter."
             .." It doesn't make sense without a valid 'files' pattern.")
-        --vpath_patterns = nil	
     end
-    global_dependency_table[name]["vpath_patterns"] = vpath_patterns
+    global_dependency_table[name].vpath_patterns = vpath_patterns
+
+    if parser_state.config == "release" or parser_state.config == "default" then
+        parser_state.release_complete = true
+    end
+    if parser_state.config == "debug" or parser_state.config == "default" then
+        parser_state.debug_complete = true
+    end
 
     return true
 end
 
-function link_impl(name, table_entry)
+function link_impl(name, table_entry, config)
     if not (name and table_entry) then
         print("Error: Unable to link to an unknown dependency '" .. name .. "'."
             .."\nMake sure it's included in the config file"
@@ -50,14 +62,36 @@ function link_impl(name, table_entry)
         return false
     end
 
-    if not table_entry["directory"] then
-        print("The directory of '" .. name .. "' dependency is unknown."
-            .. "The build has probably failed. Check build logs.")
-        return false
+    local directory = ""
+    if config == "release" then
+        if table_entry.release_directory then
+            directory = table_entry.release_directory
+        else
+            print("Error: Unable to link dependency '" .. name 
+                .. "' in release mode it was not build in.")
+            return nil
+        end
+    elseif config == "debug" then
+        if table_entry.debug_directory then
+            directory = table_entry.debug_directory
+        else
+            print("Error: Unable to link dependency '" .. name 
+                .. "' in debug mode it was not build in.")
+            return nil
+        end
+    else
+        if table_entry.release_directory then
+            directory = table_entry.release_directory
+        elseif table_entry.debug_directory then
+            directory = table_entry.debug_directory
+        else
+            print("Error: Unable to link dependency '" .. name 
+                .. "': it was not built in either release or debug mode.")
+            return nil
+        end
     end
 
-    local directory = table_entry["directory"]
-    local include_location = table_entry["include_location"]
+    local include_location = table_entry.include_location
     if include_location then
         if type(include_location) == "table" then
             for id, pattern in pairs(include_location) do
@@ -67,7 +101,7 @@ function link_impl(name, table_entry)
             includedirs { directory .. include_location }
         end
     end
-    local lib_pattern = table_entry["lib_pattern"]
+    local lib_pattern = table_entry.lib_pattern
     if lib_pattern then
         if type(lib_pattern) == "table" then
             for id, pattern in pairs(lib_pattern) do
@@ -77,7 +111,7 @@ function link_impl(name, table_entry)
             links { directory .. lib_pattern }
         end
     end
-    local file_list = table_entry["file_list"]
+    local file_list = table_entry.file_list
     if file_list then
         if type(file_list) == "table" then
             for id, pattern in pairs(file_list) do
@@ -87,8 +121,8 @@ function link_impl(name, table_entry)
             files { directory .. file_list }
         end
     end
-    local vpath_patterns = table_entry["vpath_patterns"]
-    if vpath_patterns then
+    local vpath_patterns = table_entry.vpath_patterns
+        if vpath_patterns then
         if type(vpath_patterns) == "table" then
             for left, right in pairs(vpath_patterns) do
                 vpaths {
@@ -108,13 +142,13 @@ function link_impl(name, table_entry)
     return true
 end
 
-function dependency.link(name)
-    return link_impl(name, global_dependency_table[name])
+function dependency.link(name, config)
+    return link_impl(name, global_dependency_table[name], config or "any")
 end
-function dependency.link_everything()
+function dependency.link_everything(config)
     local ret = true
     for name, table_entry in pairs(global_dependency_table) do
-        ret = link_impl(name, table_entry) and ret
+        ret = link_impl(name, table_entry, config or "any") and ret
     end
     return ret
 end

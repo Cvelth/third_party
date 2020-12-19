@@ -54,21 +54,20 @@ second_dependency:
 - `cmake`  
     Builds the project (using `cmake --build`) and installs it (`cmake 3.15+` is required)  
     Accepts `default` or optional parameters:
+    - `config` is one of `release`, `debug` or `default`, where `default` builds both release and debug versions
+    - `log_location` - a directory to place the file with `stdout` output of `cmake` calls (default value is `third_party/log`), `stderr` is not affected.
+
+    And a set of `options` parameters:
     - `options` to pass to `cmake .` command, e.g. `-G <generator-name>`
     - `build_options` to pass to `cmake --build`, e.g. `-j [<jobs>]`
     - `native_build_options` to pass to `cmake --build` after `--`
     - `install_options` to pass to `cmake --install` command, e.g. `--component <comp>`
-    - `windows_options` are identical to `options` except they are ignored if `os.target()` is not `"windows"`
-    - `windows_build_options` are identical to `build_options` except they are ignored if `os.target()` is not `"windows"`
-    - `windows_native_build_options` are identical to `native_build_options` except they are ignored if `os.target()` is not `"windows"`
-    - `linux_options` are identical to `options` except they are ignored if `os.target()` is not `"linux"`
-    - `linux_build_options` are identical to `build_options` except they are ignored if `os.target()` is not `"linux"`
-    - `linux_native_build_options` are identical to `native_build_options` except they are ignored if `os.target()` is not `"linux"`
-    - `macosx_options` are identical to `options` except they are ignored if `os.target()` is not `"macosx"`
-    - `macosx_build_options` are identical to `build_options` except they are ignored if `os.target()` is not `"macosx"`
-    - `macosx_native_build_options` are identical to `native_build_options` except they are ignored if `os.target()` is not `"macosx"`
-    - `log_location` - a directory to place the file with `stdout` output of `cmake` calls (default value is `third_party/log`), `stderr` is not affected.
-    - `debug` - if `true`, debug configuration is build if applicable. Default value is `false`
+    
+    As well as prefixes for them:
+    - configuration: `release_` or `debug_` (for example, `release_install_options` or `debug_build_options`)
+    - target OS: `windows_`, `linux_`, `macosx_`, `aix_`, `bsd_`, `haiku_`, `solaris_`, `wii_` or `xbox360_` (for example `windows_native_build_options` or `linux_options`)
+    
+    Any combination of these prefixes are acceptable, for example both `release_linux_options` and `linux_release_options` are equivalent and are concatenated together (both can even be used for the same action)
 - `install`  
     Copies files to install location based on specified patterns  
     Accepts parameters, at least one of `{include, source, lib}` must be present:
@@ -76,7 +75,7 @@ second_dependency:
     - `source` - a pattern or a list of patterns to be copied to `{install_dir}/source/**`, default is `{source_dir}/source/**`
     - `lib` - a pattern or a list of patterns to be copied to `{install_dir}/lib/**`, default is `{source_dir}/lib/**`
     - `log_location` - a directory where to place the file with output of `isntall` command calls (default value is `third_party/log`)
-    - `debug` - if `true`, files are installed into a separate, debug version of `{install_dir}`. Can be useful to try out changes without touching already installed targets.
+    - `config` is one of `release`, `debug` or `default`, where `default` installs into both release and debug directories
   
     Note, that `{source_dir}` is implied and must not be explicitly added to patterns, e.g. `{source_dir}/includes/my_include/single_file.hpp` is to be specified as `includes/my_include/single_file.hpp`
 - `depend`  
