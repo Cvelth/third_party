@@ -516,9 +516,6 @@ local function global_action(dependency_name, table, parser_state)
 			print("Warning: target OS does not support environment variable correction. "
 				.. "'global' action could behave incorrectly.")
 		end
-		for first, second in pairs(table["vpaths"]) do
-			print(first .. ": " .. second)
-		end
 	end
 	warn_about_ignored_parameters(table,
 		{ "include", "lib", "files", "vpaths" },
