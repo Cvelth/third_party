@@ -8,7 +8,7 @@ local download = require(path.getrelative(_SCRIPT_DIR, _MAIN_SCRIPT_DIR) .. "/th
 
 local function yml_to_table(file_content)
 	local tinyyaml_location = github.fetch_release("peposso", "lua-tinyyaml", "1.0", nil, "lua-tinyyaml")
-    if not os.isfile(tinyyaml_location .. "/tinyyaml.lua") then
+	if not os.isfile(tinyyaml_location .. "/tinyyaml.lua") then
 		print("Error: Fail to load yaml parser.")
 		return nil
     else
@@ -257,6 +257,40 @@ local function parse_cmake_option_name(name, accepted_options)
 	end
 end
 
+function has_environment_variables(value)
+	if value then
+		if type(value) == "table" then
+			for first, second in pairs(value) do
+				if has_environment_variables(first) then return true end
+				if has_environment_variables(second) then return true end
+			end
+			return false
+		else
+			return value:match("%$([a-zA-Z_]+)")
+				or value:match("%%[a-zA-Z_]%%")
+		end
+	end
+end
+function fix_environment_variables(value, target_os)
+	if value then
+		if type(value) == "table" then
+			local output = {}
+			for first, second in pairs(value) do
+				output[fix_environment_variables(first, target_os)]
+					= fix_environment_variables(second, target_os)
+			end
+			return output
+		else
+			if target_os == "windows" then
+				if value then value = value:gsub("%$([a-zA-Z_]+)", "%%%1%%") end
+			else
+				if value then value = value:gsub("%%([a-zA-Z_]+)%%", "$%1") end
+			end
+			return value
+		end
+	end
+end
+
 local function github_release_action(dependency_name, table, parser_state)
 	log_an_event("Action", "github_release", "    ")
 	if not check_fetch_action("github_release", parser_state) then return true end
@@ -468,6 +502,23 @@ local function global_action(dependency_name, table, parser_state)
 		table["lib"] = "default"
 		table["files"] = "default"
 		table["vpaths"] = "default"
+	else
+		if os.istarget("windows") or os.istarget("linux") or os.istarget("macosx") then
+			table["include"] = fix_environment_variables(table["include"], os.target())
+			table["lib"] = fix_environment_variables(table["lib"], os.target())
+			table["files"] = fix_environment_variables(table["files"], os.target())
+			table["vpaths"] = fix_environment_variables(table["vpaths"], os.target())
+		elseif has_environment_variables(table["include"])
+			or has_environment_variables(table["lib"])
+			or has_environment_variables(table["files"])
+			or has_environment_variables(table["vpaths"])
+		then
+			print("Warning: target OS does not support environment variable correction. "
+				.. "'global' action could behave incorrectly.")
+		end
+		for first, second in pairs(table["vpaths"]) do
+			print(first .. ": " .. second)
+		end
 	end
 	warn_about_ignored_parameters(table,
 		{ "include", "lib", "files", "vpaths" },
