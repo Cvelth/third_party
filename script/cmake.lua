@@ -29,20 +29,20 @@ function cmake.build(name, directory_path, options, log_location, configuration_
     if not os.isfile(status_file) then
         print("Getting '" .. name .. "' ready.")
         local cmake_path = custom_cmake_location or ""
-        local configuration_option = "Release"
-        if debug then configuration_option = "Debug" end
+        local cmake_configuration = "Release"
+        if not (configuration_string == "release") then cmake_configuration = "Debug" end
         local platform = ""
         if os.target() == "windows" then platform = "-A x64" end
 
         print("  Running '" .. cmake_path .. "cmake'.")
         local cmake_command = cmake_path .. "cmake"
             .. " -B" .. build_dir .. " " .. platform
-            .. " -DCMAKE_BUILD_TYPE=" .. configuration_option
+            .. " -DCMAKE_BUILD_TYPE=" .. cmake_configuration
             .. " -S " .. directory_path .. " "
             .. options["cmake"]
             .. " --no-warn-unused-cli"
             .. " > " .. log_location .. "/"
-            .. name .. "_cmake_release.log"
+            .. name .. "_cmake_" .. configuration_string .. ".log"
         cmake_command = cmake_command:gsub("[\n\r]", " ")
         if not os.execute(cmake_command) then
             print("Error: 'cmake' ("
@@ -53,13 +53,13 @@ function cmake.build(name, directory_path, options, log_location, configuration_
         print("  Building '" .. name .. "'.")
         local cmake_build_command = cmake_path .. "cmake"
             .. " --build " .. build_dir
-            .. " --config " .. configuration_option
+            .. " --config " .. cmake_configuration
             .. " --parallel "
             .. options["build"] .. " "
             .. " -- "
             .. options["native_build"] .. " "
             .. " > " .. log_location .. "/"
-            .. name .. "_cmake_build_release.log"
+            .. name .. "_cmake_build_" .. configuration_string .. ".log"
         cmake_build_command = cmake_build_command:gsub("[\n\r]", " ")
         if not os.execute(cmake_build_command) then
             print("Error: 'cmake --build' ("
@@ -70,11 +70,11 @@ function cmake.build(name, directory_path, options, log_location, configuration_
         print("  Installing '" .. name .. "'.")
         local cmake_install_command = cmake_path .. "cmake"
             .. " --install " .. build_dir
-            .. " --config " .. configuration_option
+            .. " --config " .. cmake_configuration
             .. " --prefix " .. output_dir
             .. options["install"]
             .. " > " .. log_location .. "/"
-            .. name .. "_install_release.log"
+            .. name .. "_install_" .. configuration_string .. ".log"
         cmake_install_command = cmake_install_command:gsub("[\n\r]", " ")
         if not os.execute(cmake_install_command) then
             print("Error: 'cmake --install' ("
