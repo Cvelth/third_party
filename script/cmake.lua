@@ -27,7 +27,7 @@ function cmake.build(name, directory_path, options, log_location, configuration_
     os.mkdir(build_dir)
     os.mkdir(output_dir)
     if not os.isfile(status_file) then
-        print("Getting '" .. name .. "' ready.")
+        print("Getting '" .. name .. "' (" .. configuration_string .. ") ready.")
         local cmake_path = custom_cmake_location or ""
         local cmake_configuration = "Release"
         if not (configuration_string == "release") then cmake_configuration = "Debug" end
