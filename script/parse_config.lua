@@ -590,10 +590,12 @@ function config_parser.parse(config_file, user_config_file)
     local f = assert(io.open(config_file, "rb"))
     local config_content = f:read("*all")
 	f:close()
-	
-	local config_table = yml_to_table(config_content)
-	if not config_table then return false end
-	return parse_config(config_table)
+
+	if not(#config_content:match "[^%s]*" == 0) then
+		local config_table = yml_to_table(config_content)
+		if not config_table then return false end
+		return parse_config(config_table)
+	end
 end
 
 return config_parser
