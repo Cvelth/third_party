@@ -3,8 +3,12 @@ local installer = {}
 local function install_impl(pattern, source_location, directory, file_type, log_file, status)
     local matches = os.matchfiles(source_location ..  "/" .. pattern)
     for id, file in pairs(matches) do
-		local destination = directory .. file_type .. "/"
-            .. path.getrelative(source_location, file)
+		local destination = directory 
+        if pattern:sub(1, file_type:len()) == file_type then
+            destination = destination .. "/" .. path.getrelative(source_location, file)
+        else
+            destination = destination .. file_type .. "/" .. path.getrelative(source_location, file)
+        end
         os.mkdir(path.getdirectory(destination))
         ret, err = os.copyfile(file, destination)
         if not ret then print(err) end
